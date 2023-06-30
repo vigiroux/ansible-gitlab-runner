@@ -61,9 +61,9 @@
   when: gitlab_runner_package_version is defined
   changed_when: false
 
-- name: (Debian) Remove ~/gitlab-runner/.bash_logout on debian buster and ubuntu focal
+- name: (Debian) Remove ~gitlab-runner/.bash_logout on debian buster and ubuntu focal
   file:
-    path: /home/gitlab-runner/.bash_logout
+    path: "/home/{{ gitlab_runner_runtime_owner }}/.bash_logout"
     state: absent
   when: ansible_distribution_release in ["buster", "focal", "jammy"]
 
