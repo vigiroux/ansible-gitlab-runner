@@ -8,13 +8,14 @@
 - name: Get pre-existing runner configs
   set_fact:
     runner_configs: "{{ (runner_config_file['content'] | b64decode).split('[[runners]]\n') }}"
+  no_log: "{{ gitlab_runner_no_log_secrets | default(omit) }}"
 
 - name: Create temporary directory
   tempfile:
     state: directory
     suffix: gitlab-runner-config
   register: temp_runner_config_dir
-  check_mode: no
+  check_mode: false
   changed_when: false
 
 - name: Write config section for each runner
@@ -25,14 +26,15 @@
   loop_control:
     index_var: runner_config_index
     loop_var: runner_config
+  no_log: "{{ gitlab_runner_no_log_secrets | default(omit) }}"
 
 - name: Assemble new config.toml
   assemble:
     src: "{{ temp_runner_config_dir.path }}"
     dest: "{{ gitlab_runner_config_file }}"
-    delimiter: '[[runners]]\n'
-    backup: yes
+    delimiter: "[[runners]]\\n"
+    backup: true
     validate: "{{ gitlab_runner_executable }} verify -c %s"
-    mode: 0600
+    mode: "0600"
   become: "{{ gitlab_runner_system_mode }}"
   diff: "{{ gitlab_runner_show_config_diff|bool }}"

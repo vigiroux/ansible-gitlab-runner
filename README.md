@@ -1,5 +1,9 @@
-GitLab Runner [![Build Status](https://api.travis-ci.org/riemers/ansible-gitlab-runner.svg?branch=master)](https://travis-ci.org/riemers/ansible-gitlab-runner) [![Ansible Role](https://img.shields.io/badge/role-riemers.gitlab--runner-blue.svg?maxAge=2592000)](https://galaxy.ansible.com/riemers/gitlab-runner/)
+GitLab Runner [![Build Status](https://app.travis-ci.com/riemers/ansible-gitlab-runner.svg?branch=master)](https://travis-ci.org/riemers/ansible-gitlab-runner) [![Ansible Role](https://img.shields.io/badge/role-riemers.gitlab--runner-blue.svg?maxAge=2592000)](https://galaxy.ansible.com/ui/standalone/roles/riemers/gitlab-runner/)
 =============
+
+**IMPORTANT**! ansible galaxy made a mess of it. The role is now under ansible-gitlab-runner instead of gitlab-runner. See [item here](https://forum.ansible.com/t/lost-all-history-of-ansible-role-after-delete-of-a-another-role/1753)
+=============
+Will try and see if it can be reverted, depending if someone is willing to reach out for it. Putting some replies on the post might help, don't know what else i can do more.
 
 This role will install the [official GitLab Runner](https://gitlab.com/gitlab-org/gitlab-runner)
 (fork from haroldb) with updates. Needed something simple and working, this did the trick for me. Open for changes though.
@@ -24,6 +28,7 @@ On Linux, use `gitlab_runner_package_version` instead.
 - `gitlab_runner_runners` - A list of gitlab runners to register & configure. Defaults to a single shell executor.
 - `gitlab_runner_skip_package_repo_install`- Skip the APT or YUM repository installation (by default, false). You should provide a repository containing the needed packages before running this role.
 - `gitlab_runner_config_update_mode`- Set to `by_config_toml` (default) if this role should apply config changes by updating the `config.toml` itself or set it to `by_registering` if config changes should be applied by unregistering and regeistering the runner in case the config has changed.
+- `gitlab_unregister_runner_executors_which_are_not_longer_configured` - Set to `true` if executors should be unregistered from a runner in case it is are not longer configured in ansible. Default: `false`
 
 See the [`defaults/main.yml`](https://github.com/riemers/ansible-gitlab-runner/blob/master/defaults/main.yml) file listing all possible options which you can be passed to a runner registration command.
 
@@ -155,6 +160,11 @@ Example:
 
 docker-machine rm test
 ```
+
+Run As A Different User
+-----------------------
+To run the Gitlab Runner as a different user (rather than the default `gitlab-runner` user), there is a workaround requiring a little
+extra Ansible to be run. See https://github.com/riemers/ansible-gitlab-runner/issues/277 for details.
 
 Contributors
 ------------

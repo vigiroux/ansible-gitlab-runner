@@ -1,5 +1,4 @@
 ---
-
 - name: Construct the runner command without secrets
   set_fact:
     register_runner_cmd: >-
@@ -40,6 +39,9 @@
       {% for device in gitlab_runner.docker_devices | default([]) %}
       --docker-devices "{{ device }}"
       {% endfor %}
+      {% if gitlab_runner.docker_network_mode is defined %}
+      --docker-network-mode '{{ gitlab_runner.docker_network_mode }}'
+      {% endif %}
       {% if gitlab_runner.ssh_user is defined %}
       --ssh-user '{{ gitlab_runner.ssh_user }}'
       {% endif %}
@@ -73,6 +75,24 @@
       {% if gitlab_runner.cache_s3_bucket_location is defined %}
       --cache-s3-bucket-location '{{ gitlab_runner.cache_s3_bucket_location }}'
       {% endif %}
+      {% if gitlab_runner.cache_gcs_bucket_name is defined %}
+      --cache-gcs-bucket-name '{{ gitlab_runner.cache_gcs_bucket_name }}'
+      {% endif %}
+      {% if gitlab_runner.cache_gcs_credentials_file is defined %}
+      --cache-gcs-credentials-file '{{ gitlab_runner.cache_gcs_credentials_file }}'
+      {% endif %}
+      {% if gitlab_runner.cache_gcs_access_id is defined %}
+      --cache-gcs-access-id '{{ gitlab_runner.cache_gcs_access_id }}'
+      {% endif %}
+      {% if gitlab_runner.cache_azure_account_name is defined %}
+      --cache-azure-account-name '{{ gitlab_runner.cache_azure_account_name }}'
+      {% endif %}
+      {% if gitlab_runner.cache_azure_container_name is defined %}
+      --cache-azure-container-name '{{ gitlab_runner.cache_azure_container_name }}'
+      {% endif %}
+      {% if gitlab_runner.cache_azure_storage_domain is defined %}
+      --cache-azure-storage-domain '{{ gitlab_runner.cache_azure_storage_domain }}'
+      {% endif %}
       {% if gitlab_runner.builds_dir|default(false) %}
       --builds-dir '{{ gitlab_runner.builds_dir }}'
       {% endif %}
@@ -90,24 +110,25 @@
   block:
     - name: Check if the configuration has changed since the last run
       ansible.builtin.copy:
-        content: >
+        content: >-
           {{ register_runner_cmd }}
           --registration-token '{{ gitlab_runner.token|default(gitlab_runner_registration_token)|hash("sha1") }}'
           {% if gitlab_runner.cache_s3_secret_key is defined %}
           --cache-s3-secret-key '{{ gitlab_runner.cache_s3_secret_key|hash("sha1") }}'
           {% endif %}
+          {% if gitlab_runner.cache_gcs_private_key is defined %}
+          --cache-gcs-private-key '{{ gitlab_runner.cache_gcs_private_key }}'
+          {% endif %}
+          {% if gitlab_runner.cache_azure_account_key is defined %}
+          --cache-azure-account-key '{{ gitlab_runner.cache_azure_account_key }}'
+          {% endif %}
           {% if gitlab_runner.ssh_password is defined %}
           --ssh-password '{{ gitlab_runner.ssh_password|hash("sha1") }}'
           {% endif %}
-        dest: '{{ gitlab_runner_config_file_location }}/last-runner-config-{{ actual_gitlab_runner_name }}'
+        dest: "{{ gitlab_runner_config_file_location }}/last-runner-config-{{ actual_gitlab_runner_name }}"
       register: runner_config_state
 
-    - import_tasks: list-configured-runners-windows.yml
-
-    - name: (Windows) Unregister runner when config has changed
-      win_command: '{{ gitlab_runner_executable }} unregister --name {{ actual_gitlab_runner_name }}'
-      args:
-        chdir: "{{ gitlab_runner_config_file_location }}"
+    - import_tasks: unregister-runner.yml
       when:
         - actual_gitlab_runner_name in registered_gitlab_runner_names
         - runner_config_state.changed
@@ -116,17 +137,23 @@
 - import_tasks: list-configured-runners-windows.yml
 
 - name: (Windows) Register runner to GitLab
-  win_shell: >
+  win_shell: >-
     {{ register_runner_cmd }}
     --registration-token '{{ gitlab_runner.token|default(gitlab_runner_registration_token) }}'
     {% if gitlab_runner.cache_s3_secret_key is defined %}
     --cache-s3-secret-key '{{ gitlab_runner.cache_s3_secret_key }}'
     {% endif %}
+    {% if gitlab_runner.cache_gcs_private_key is defined %}
+    --cache-gcs-private-key '{{ gitlab_runner.cache_gcs_private_key }}'
+    {% endif %}
+    {% if gitlab_runner.cache_azure_account_key is defined %}
+    --cache-azure-account-key '{{ gitlab_runner.cache_azure_account_key }}'
+    {% endif %}
     {% if gitlab_runner.ssh_password is defined %}
     --ssh-password '{{ gitlab_runner.ssh_password }}'
     {% endif %}
   when:
-    - actual_gitlab_runner_name) not in registered_gitlab_runner_names
+    - actual_gitlab_runner_name not in registered_gitlab_runner_names
     - gitlab_runner.state|default('present') == 'present'
   args:
     chdir: "{{ gitlab_runner_config_file_location }}"
